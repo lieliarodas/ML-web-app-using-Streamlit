@@ -8,11 +8,13 @@
         body { background-color: #1c1c1c; color: #fff; }
         .btn-imdb { background-color: #F5C518; color: #000; }
         .card { margin-bottom: 15px; }
+        .matched-title { color: #F5C518; font-weight: bold; }
     </style>
 </head>
 <body>
 <div class="container mt-5">
     <h1 class="mb-4">IMDb Movie Recommender</h1>
+    
     <form method="post" class="mb-4">
         <div class="row">
             <div class="col-md-6">
@@ -28,7 +30,10 @@
     </form>
 
     {% if recommendations %}
-        <h3>Top {{ top_n }} recommendations for "{{ query_title }}"</h3>
+        {% if matched_title and matched_title != query_title %}
+            <p>Showing results for <span class="matched-title">{{ matched_title }}</span> instead of "{{ query_title }}"</p>
+        {% endif %}
+        <h3>Top {{ top_n }} recommendations:</h3>
         <div class="row">
             {% for movie in recommendations %}
                 <div class="col-md-4">
