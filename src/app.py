@@ -6,7 +6,6 @@ import pandas as pd
 import pickle
 
 clean_data = pd.read_pickle("clean_data.pkl")
-
 with open("cosine_sim.pkl", "rb") as f:
     cosine_sim = pickle.load(f)
 
