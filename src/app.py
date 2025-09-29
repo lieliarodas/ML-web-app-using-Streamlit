@@ -1,6 +1,3 @@
-from utils import db_connect
-engine = db_connect()
-
 from flask import Flask, request, jsonify
 import pandas as pd
 import pickle
@@ -15,15 +12,10 @@ with open(os.path.join(BASE_DIR, "cosine_sim.pkl"), "rb") as f:
 
 
 def recommend_movies(title, top_n=5):
-    
     idx = clean_data[clean_data['Series_Title'] == title].index[0]
-    
-   
     sim_scores = list(enumerate(cosine_sim[idx]))
     sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
     sim_scores = sim_scores[1:top_n+1] 
-    
-    
     movie_indices = [i[0] for i in sim_scores]
     return clean_data.iloc[movie_indices].to_dict(orient='records')
 
@@ -39,4 +31,4 @@ def recommend_endpoint():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
