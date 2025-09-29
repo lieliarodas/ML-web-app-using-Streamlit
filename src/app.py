@@ -13,14 +13,19 @@ with open(os.path.join(BASE_DIR, "cosine_sim.pkl"), "rb") as f:
 
 # Función de recomendación
 def recommend_movies(title, top_n=5):
-    if title not in clean_data['Series_Title'].values:
+    title_lower = title.strip().lower()
+    # Buscar coincidencia insensible a mayúsculas
+    matching_titles = clean_data[clean_data['Series_Title'].str.lower() == title_lower]
+    
+    if matching_titles.empty:
         return []
     
-    idx = clean_data[clean_data['Series_Title'] == title].index[0]
+    idx = matching_titles.index[0]
     sim_scores = list(enumerate(cosine_sim[idx]))
     sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
     sim_scores = sim_scores[1:top_n+1]
     movie_indices = [i[0] for i in sim_scores]
+    
     return clean_data.iloc[movie_indices].to_dict(orient='records')
 
 # Crear app Flask
@@ -34,7 +39,7 @@ def home():
     top_n = 5
 
     if request.method == "POST":
-        query_title = request.form.get("title")
+        query_title = request.form.get("title", "").strip()
         top_n = int(request.form.get("top_n", 5))
         recommendations = recommend_movies(query_title, top_n)
 
@@ -46,7 +51,7 @@ def home():
 # Endpoint API
 @app.route("/recommend", methods=["GET"])
 def recommend_endpoint():
-    movie_title = request.args.get("title")
+    movie_title = request.args.get("title", "").strip()
     if not movie_title:
         return jsonify({"error": "Please provide a movie title"}), 400
     top_n = int(request.args.get("top_n", 5))
@@ -55,4 +60,4 @@ def recommend_endpoint():
 
 # Desarrollo local
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
