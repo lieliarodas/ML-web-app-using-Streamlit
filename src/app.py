@@ -4,10 +4,15 @@ engine = db_connect()
 from flask import Flask, request, jsonify
 import pandas as pd
 import pickle
+import os
 
-clean_data = pd.read_pickle("clean_data.pkl")
-with open("cosine_sim.pkl", "rb") as f:
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+clean_data = pd.read_pickle(os.path.join(BASE_DIR, "clean_data.pkl"))
+
+with open(os.path.join(BASE_DIR, "cosine_sim.pkl"), "rb") as f:
     cosine_sim = pickle.load(f)
+
 
 def recommend_movies(title, top_n=5):
     
