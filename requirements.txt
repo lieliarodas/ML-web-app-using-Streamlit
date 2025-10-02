@@ -3,4 +3,5 @@ pandas
 scikit-learn
 numpy
 scipy
-fuzzywuzzy[speedup]
+fuzzywuzzy
+python-Levenshtein
