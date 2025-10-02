@@ -1,8 +1,8 @@
-from flask import Flask, request, jsonify, render_template
+import streamlit as st
 import pandas as pd
 import pickle
 import os
-from rapidfuzz import process, fuzz
+from fuzzywuzzy import process
 
 # Ruta base
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -12,60 +12,49 @@ clean_data = pd.read_pickle(os.path.join(BASE_DIR, "clean_data.pkl"))
 with open(os.path.join(BASE_DIR, "cosine_sim.pkl"), "rb") as f:
     cosine_sim = pickle.load(f)
 
-# Función de recomendación
-def recommend_movies(title, top_n=5):
-    # Coincidencia difusa
-    titles_list = clean_data['Series_Title'].tolist()
-    best_match = process.extractOne(title, titles_list, scorer=fuzz.WRatio)
-    
-    if best_match is None:
+# Función de recomendación con fuzzy matching
+def recommend_movies(query, top_n=5):
+    # buscar título más parecido
+    matches = process.extract(query, clean_data['Series_Title'], limit=1)
+    if not matches:
         return [], None
     
-    matched_title = best_match[0]  # título más cercano
-    idx = clean_data[clean_data['Series_Title'] == matched_title].index[0]
-    
+    best_match, score = matches[0]
+    if score < 50:  # muy bajo, probablemente no relevante
+        return [], None
+
+    idx = clean_data[clean_data['Series_Title'] == best_match].index[0]
     sim_scores = list(enumerate(cosine_sim[idx]))
     sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
     sim_scores = sim_scores[1:top_n+1]
     movie_indices = [i[0] for i in sim_scores]
-    
-    return clean_data.iloc[movie_indices].to_dict(orient='records'), matched_title
+    return clean_data.iloc[movie_indices].to_dict(orient='records'), best_match
 
-# Crear app Flask
-app = Flask(__name__)
 
-# Página principal con formulario
-@app.route("/", methods=["GET", "POST"])
-def home():
-    recommendations = []
-    query_title = ""
-    matched_title = None
-    top_n = 5
+# ---------------- Streamlit UI ----------------
 
-    if request.method == "POST":
-        query_title = request.form.get("title")
-        top_n = int(request.form.get("top_n", 5))
-        recommendations, matched_title = recommend_movies(query_title, top_n)
+st.set_page_config(page_title="🎬 IMDb Movie Recommender", layout="wide")
 
-    return render_template("index.html",
-                           recommendations=recommendations,
-                           query_title=query_title,
-                           matched_title=matched_title,
-                           top_n=top_n)
+st.title("🎬 IMDb Movie Recommender")
+st.write("Type the name of a movie and get recommendations based on plot, genre, director and actors.")
 
-# Endpoint API
-@app.route("/recommend", methods=["GET"])
-def recommend_endpoint():
-    movie_title = request.args.get("title")
-    if not movie_title:
-        return jsonify({"error": "Please provide a movie title"}), 400
-    top_n = int(request.args.get("top_n", 5))
-    recommendations, matched_title = recommend_movies(movie_title, top_n)
-    return jsonify({
-        "matched_title": matched_title,
-        "recommendations": recommendations
-    })
+# Input del usuario
+query_title = st.text_input("Enter a movie title:", "")
+top_n = st.slider("Number of recommendations", min_value=1, max_value=20, value=5)
 
-# Desarrollo local
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+if st.button("Get Recommendations"):
+    if query_title:
+        recommendations, best_match = recommend_movies(query_title, top_n)
+        
+        if recommendations:
+            st.success(f"Showing recommendations for **{best_match}**")
+            for movie in recommendations:
+                st.subheader(movie['Series_Title'])
+                st.write(f"**Genre:** {movie['Genre']}")
+                st.write(f"**Director:** {movie['Director']}")
+                st.write(f"**IMDb Rating:** {movie['IMDB_Rating']}")
+                st.markdown("---")
+        else:
+            st.error("No similar movies found. Try another title.")
+    else:
+        st.warning("Please enter a movie title.")
