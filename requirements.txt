@@ -1,7 +1,6 @@
-flask
+streamlit
 pandas
 scikit-learn
 numpy
 scipy
-gunicorn
-rapidfuzz
+fuzzywuzzy[speedup]
